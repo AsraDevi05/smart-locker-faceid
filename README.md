@@ -1,12 +1,14 @@
 # AIoT Smart Locker — Face ID Module
 **RET503 · Pertemuan 3 · CDIO Stage #2 · Analisis Hasil**
+**Asra Devi Fanitya**
+**4222401020**
 
 ---
 
 ## Deskripsi Proyek
 Sistem autentikasi wajah untuk smart locker berbasis AIoT menggunakan Transfer Learning. Tiga arsitektur CNN pretrained (ImageNet) dibandingkan untuk klasifikasi wajah pengguna terdaftar secara real-time melalui kamera Windows Hello USB (1920×1080, FOV 95°).
 
-**Kelas:** Asra, Ester (2 kelas)
+**Kelas:** 2 kelas
 **Dataset:** 50 foto/kelas → 80 train / 20 val (split 80:20 random)
 **Strategi TL:** Feature extraction — backbone dibekukan, hanya head yang dilatih
 
