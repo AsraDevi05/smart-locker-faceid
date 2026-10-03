@@ -1,0 +1,1 @@
+﻿cd "C:\KULIAHHHHH\SEMESTER 5\RE 503 Computer Vision dan Deep Learning\smart_locker_faceid"; git pull origin main --rebase; git add .; $s = git status --porcelain; if ($s) { git commit -m "auto-sync: $(Get-Date -Format 'yyyy-MM-dd HH:mm')"; git push origin main; Write-Host "Pushed" } else { Write-Host "No changes." }
