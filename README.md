@@ -1,90 +1,231 @@
-# AIoT Smart Locker — Face ID Module
-**RET503 · Pertemuan 3 · CDIO Stage #2 · Analisis Hasil**
-**Asra Devi Fanitya**
-**4222401020**
+# AIoT Smart Locker — ResNet-18 Face ID
+
+**RET503 · Pertemuan 3 · [Asra Devi Fanitya] · [4222401020]**
 
 ---
 
 ## Deskripsi Proyek
-Sistem autentikasi wajah untuk smart locker berbasis AIoT menggunakan Transfer Learning. Tiga arsitektur CNN pretrained (ImageNet) dibandingkan untuk klasifikasi wajah pengguna terdaftar secara real-time melalui kamera Windows Hello USB (1920×1080, FOV 95°).
 
-**Kelas:** 2 kelas
-**Dataset:** 50 foto/kelas → 80 train / 20 val (split 80:20 random)
-**Strategi TL:** Feature extraction — backbone dibekukan, hanya head yang dilatih
+Proyek ini merupakan eksperimen modul Face ID untuk sistem AIoT Smart Locker menggunakan model ResNet-18. Model digunakan untuk mengklasifikasikan wajah pengguna terdaftar ke dalam dua kelas, yaitu Asra dan Ester.
+
+Eksperimen ini dilakukan untuk melihat performa transfer learning ResNet-18 dalam melakukan klasifikasi wajah serta mengukur waktu inference pada CPU, sebagai bagian dari perbandingan tiga arsitektur (ResNet-18, ResNet-50, EfficientNet-B0) dalam kelompok.
+
+---
+
+## Dataset
+
+Dataset utama terdiri dari 100 gambar wajah:
+
+| Kelas | Jumlah |
+|---|---|
+| Asra | 50 |
+| Ester | 50 |
+| **Total** | **100** |
+
+> Pada `metadata.csv` juga terdapat data `ali` sebanyak 3 gambar dan `unknown` sebanyak 1 gambar. Data tersebut tidak digunakan dalam eksperimen utama.
+
+---
+
+## Pembagian Dataset
+
+Asra dan Ester hanya memiliki satu sesi pengambilan data (sesi1), sehingga pembagian berdasarkan sesi tidak dapat dilakukan.
+
+Eksperimen menggunakan random split 80:20 dengan seed=42.
+
+| Dataset | Asra | Ester | Total |
+|---|---|---|---|
+| Training | 40 | 40 | 80 |
+| Validation | 10 | 10 | 20 |
+
+---
+
+## Pipeline Preprocessing
+
+```
+Gambar
+  ↓
+Convert BGR → RGB
+  ↓
+Random Horizontal Flip + Color Jitter (train) / Center Crop (val)
+  ↓
+Resize 224 × 224
+  ↓
+ToTensor
+  ↓
+Normalize ImageNet
+```
+
+Parameter normalisasi:
+```
+mean = [0.485, 0.456, 0.406]
+std  = [0.229, 0.224, 0.225]
+```
+
+---
+
+## Model ResNet-18
+
+Model yang digunakan adalah ResNet-18 pretrained ImageNet. Backbone dibekukan (feature extraction), hanya fully connected layer terakhir yang dilatih ulang dengan 2 output kelas:
+```
+0 → Asra
+1 → Ester
+```
+
+| Parameter | Nilai |
+|---|---|
+| Model | ResNet-18 |
+| Pretrained | ImageNet |
+| Strategi TL | Feature extraction (backbone beku) |
+| Jumlah kelas | 2 |
+| Batch size | 16 |
+| Epoch | 10 |
+| Learning rate | 0.001 |
+| Optimizer | Adam |
+| Scheduler | CosineAnnealingLR |
+| Loss function | Cross Entropy Loss |
+| Device | CPU |
+
+---
+
+## Struktur Folder
+
+```
+ResNet18/
+├── dataset_raw/              # Dataset lokal, tidak di-upload ke GitHub
+│   ├── metadata.csv
+│   ├── Asra/
+│   └── Ester/
+├── scripts/
+│   ├── capture.py
+│   ├── split.py
+│   ├── train.py
+│   └── latency.py
+├── results/
+│   ├── training_results.csv
+│   ├── loss_plot_resnet18.png
+│   └── accuracy_plot_resnet18.png
+├── .gitignore
+├── requirements.txt
+└── README.md
+```
+
+> File model `best_resnet18.pth` tidak di-upload ke repository karena ukurannya besar.
+
+---
+
+## Instalasi
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+---
+
+## Persiapan Dataset
+
+Dataset tidak disertakan dalam repository karena berisi foto wajah. Struktur dataset lokal:
+
+```
+dataset_raw/
+├── metadata.csv
+├── Asra/
+└── Ester/
+```
+
+Pengambilan data menggunakan `capture.py` dengan kamera Windows Hello USB (1920×1080, FOV 95°) dan detektor wajah YuNet.
+
+---
+
+## Training ResNet-18
+
+```bash
+python scripts/train.py --model resnet18
+```
+
+Program akan:
+1. Membaca `dataset_split/train` dan `dataset_split/val`
+2. Memuat ResNet-18 pretrained ImageNet
+3. Membekukan backbone, melatih hanya fc layer
+4. Melatih model selama 10 epoch
+5. Menyimpan hasil training ke `results/`
+
+---
+
+## Pengukuran Latency
+
+```bash
+python scripts/latency.py
+```
+
+Pengukuran dilakukan pada CPU dengan 100 runs setelah warm-up.
 
 ---
 
 ## Hasil Eksperimen
 
-### Tabel Perbandingan 3 Arsitektur
+| Parameter | Hasil |
+|---|---|
+| Model | ResNet-18 |
+| Jumlah kelas | 2 |
+| Total dataset | 100 gambar |
+| Training | 80 gambar |
+| Validation | 20 gambar |
+| Epoch | 10 |
+| Akurasi validation terbaik | **95.00%** |
+| Epoch terbaik | 6 |
+| Epoch pertama @ 90% | 4 |
+| Waktu training | ±1.0 menit |
+| Average latency | 59.92 ms |
+| Minimum latency | 47.30 ms |
+| Maximum latency | 138.50 ms |
+| FPS estimasi | 16.7 FPS |
 
-| Model | Param (juta) | Best Val Acc | Waktu Latih | Epoch @ 90% | Latensi CPU |
-|---|---|---|---|---|---|
-| ResNet-18 | ≈11.7 | **95.00%** | 1.0 menit | 4 | 59.92 ms (16.7 FPS) |
-| ResNet-50 | ≈25.6 | **100.00%** | 2.2 menit | 3 | - |
-| EfficientNet-B0 | ≈5.3 | **100.00%** | 1.5 menit | 2 | - |
+### Grafik Accuracy
+![Accuracy Plot](results/accuracy_plot_resnet18.png)
 
-### Latensi Inference (CPU, 100 runs)
+### Grafik Loss
+![Loss Plot](results/loss_plot_resnet18.png)
 
-| Model | Avg (ms) | Min (ms) | Max (ms) | FPS Est. |
+---
+
+## Analisis Hasil
+
+ResNet-18 memperoleh akurasi validation terbaik sebesar **95%** pada epoch ke-6. Model pertama kali mencapai 90% pada epoch ke-4, menunjukkan konvergensi yang stabil dibanding model yang lebih besar.
+
+Kurva training menunjukkan loss yang konsisten turun tanpa lonjakan drastis — berbeda dengan ResNet-50 (anggota tim lain) yang sempat drop ke 60% di epoch ke-4. Stabilitas ini menjadi keunggulan ResNet-18 untuk dataset kecil.
+
+Dari sisi latensi, ResNet-18 membutuhkan rata-rata **59.92 ms per frame** (16.7 FPS) di CPU laptop. Nilai ini memenuhi target minimum 10 FPS untuk sistem smart locker.
+
+---
+
+## Perbandingan dengan Model Lain (Kelompok)
+
+| Model | Best Val Acc | Waktu Latih | Epoch @ 90% | Avg Latency |
 |---|---|---|---|---|
-| ResNet-18 | 59.92 | 47.30 | 138.50 | 16.7 |
-| MobileNetV3-Small | 20.39 | 15.04 | 68.14 | 49.0 |
+| **ResNet-18 (saya)** | 95.00% | 1.0 menit | 4 | 59.92 ms |
+| ResNet-50 | 100.00% | 2.2 menit | 3 | - |
+| EfficientNet-B0 | 100.00% | 1.5 menit | 2 | 56.40 ms |
 
-*(Grafik akurasi per epoch: lihat `results/accuracy_plot.png`)*
-
----
-
-## Analisis
-
-### Hipotesis Awal
-Feature extraction diperkirakan efektif karena dataset kecil (50 foto/kelas) dan domain mirip (foto wajah RGB). Model pretrained ImageNet sudah belajar fitur tepi, tekstur, dan pola wajah yang relevan.
-
-### Temuan Utama
-
-**1. Semua model mencapai akurasi tinggi dengan data kecil**
-Ketiga model berhasil mencapai ≥ 90% hanya dengan 40 foto training per kelas. Ini membuktikan bahwa transfer learning sangat efektif untuk dataset kecil — fitur ImageNet yang sudah dipelajari cukup kuat untuk diadaptasi ke domain wajah.
-
-**2. EfficientNet-B0 paling efisien**
-EfficientNet-B0 mencapai 100% val accuracy di epoch ke-2, paling cepat di antara ketiganya. Dengan ukuran model hanya ≈5.3 juta parameter (paling kecil), ini menunjukkan desain arsitekturnya yang lebih efisien dibanding ResNet.
-
-**3. ResNet-50 akurat tapi tidak stabil di awal**
-ResNet-50 sempat drop ke 60% di epoch 4 setelah mencapai 100% di epoch 3. Ini menunjukkan bahwa dengan data yang sangat kecil, model yang lebih besar justru lebih sulit distabilkan — perlu learning rate schedule yang lebih hati-hati.
-
-**4. ResNet-18 paling stabil**
-Meskipun akurasi terbaik hanya 95%, kurva training ResNet-18 paling konsisten dan tidak ada drop drastis. Untuk deployment di edge device, stabilitas ini penting.
-
-**5. Latensi: MobileNetV3-Small jauh lebih cepat**
-MobileNetV3-Small (20.39 ms, 49 FPS) hampir 3× lebih cepat dari ResNet-18 (59.92 ms, 16.7 FPS) di CPU. Untuk smart locker yang butuh respons real-time, MobileNetV3-Small lebih cocok meskipun tidak diuji akurasinya di eksperimen ini.
-
-### Model yang Dipilih untuk Deployment
-**EfficientNet-B0** — kombinasi terbaik antara akurasi (100%) dan efisiensi model (≈5.3M parameter, waktu latih 1.5 menit). Untuk latensi deployment nanti perlu diukur ulang setelah Mini PC datang.
-
-### Keterbatasan
-- Dataset sangat kecil (50 foto/kelas, 2 kelas) — hasil 100% val acc perlu divalidasi dengan lebih banyak data dan lebih banyak kelas
-- Semua foto diambil dalam 1 sesi kondisi yang sama (terang) — belum ada variasi sesi untuk menguji robustness
-- Latensi EfficientNet-B0 dan ResNet-50 belum diukur — perlu dijalankan `latency.py` yang diupdate
+ResNet-18 memiliki akurasi lebih rendah namun kurva training paling stabil. EfficientNet-B0 unggul di akurasi dan efisiensi model, sementara ResNet-50 paling akurat namun paling berat.
 
 ---
 
-## Cara Reproduksi
-```bash
-# 1. Ambil data
-python scripts/capture.py Asra terang --sesi sesi1 --target 50 --cam 1
-python scripts/capture.py Ester terang --sesi sesi1 --target 50 --cam 1
+## Keterbatasan Eksperimen
 
-# 2. Split dataset
-python scripts/split.py
+1. Dataset hanya terdiri dari 100 gambar (50/kelas)
+2. Hanya satu sesi pengambilan data — train dan val dari kondisi yang sama
+3. Hanya 2 kelas — belum representatif untuk deployment 13 pengguna
+4. Pengujian latency dilakukan di CPU laptop, bukan perangkat final (Mini PC)
+5. Belum ada pengujian dengan wajah orang yang tidak terdaftar
 
-# 3. Training 3 model
-python scripts/train.py --model resnet18
-python scripts/train.py --model resnet50
-python scripts/train.py --model efficientnet_b0
-
-# 4. Ukur latensi
-python scripts/latency.py
-```
+Eksperimen berikutnya dapat menggunakan dataset lebih besar, beberapa sesi pengambilan, kondisi pencahayaan beragam, dan pengujian di Mini PC yang menjadi perangkat target.
 
 ---
 
-*Program Studi Teknologi Rekayasa Robotika · Politeknik Negeri Batam · RET503*
+## Catatan
+
+Eksperimen ini berfokus pada klasifikasi dua wajah terdaftar menggunakan ResNet-18 sebagai bagian dari pengembangan modul Face ID pada sistem AIoT Smart Locker. Dataset foto wajah dan file model hasil training tidak disertakan dalam repository untuk menjaga privasi dan menghindari penyimpanan file berukuran besar.
+
+---
+
+*Program Studi Teknologi Rekayasa Robotika · Politeknik Negeri Batam*
